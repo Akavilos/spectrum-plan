@@ -1,0 +1,14 @@
+services:
+  spectrum-plan:
+    build: .
+    image: spectrum-plan:local
+    restart: unless-stopped
+    environment:
+      PANEL_KEY: ${PANEL_KEY:?Set PANEL_KEY in .env}
+      ONEBOT_ACCESS_TOKEN: ${ONEBOT_ACCESS_TOKEN:?Set ONEBOT_ACCESS_TOKEN in .env}
+      ROLE_DATA_DIR: /app/data/role-system
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:${PANEL_PORT:-8080}:8080"
+    volumes:
+      - ./data:/app/data

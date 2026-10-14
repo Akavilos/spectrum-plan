@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>光谱核心数据 · 光谱计划</title>
+
+    <script src="/assets/vue.global.prod.js"></script>
+    <link rel="stylesheet" href="/assets/data/workspace.css?v=0.4.25">
+<link rel="stylesheet" href="/assets/data/selection.css?v=0.4.21"></head>
+<body>
+<!-- 光谱核心数据面板：按当前会话查看记录，管理共同生活、人物、导演和世界书。 -->
+    <div id="app" v-cloak>
+
+        <div v-if="!initialized" class="loading-screen">
+            <div class="spinner"></div>
+            <div style="font-weight: 700; color: var(--text-light);">正在读取光谱核心数据…</div>
+            <p style="font-size: 12px; color: var(--text-light); margin-top: 10px;">{{ statusMsg }}</p>
+            <div v-if="fatalError" class="alert-box">{{ fatalError }}</div>
+        </div>
+
+        <div v-else class="container">
+            <div class="header">
+                <div class="title"><div class="eyebrow">SPECTRUM PROJECT / DATA</div>
+                    <h1>光谱核心数据</h1>
+                    <p>查看真实往来、生活经历、人物认知与世界书。</p>
+                </div>
+                <div class="header-actions">
+                    <span class="hint">统计范围：全部会话</span>
+                    <button class="btn btn-ghost" @click="refresh" :disabled="loadingData">{{ loadingData ? '刷新中…' : '刷新数据' }}</button>
+                </div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card" v-for="s in stats" :key="s.label">
+                    <div class="stat-label"><span :class="['tag', s.tagClass]">{{ s.level }}</span> {{ s.label }}</div>
+                    <div class="stat-value" :style="{color: s.color}">{{ overview.counts?.[s.key] || 0 }}</div>
+                </div>
+            </div>
+
+            <div class="main-card">
+
+                <div class="selector-area">
+                    <div><label for="spectrum-session">查看范围</label>
+                        <select id="spectrum-session" v-model="filterUmo">
+                            <option value="">全部会话</option>
+                            <option v-for="u in umos" :key="u.id" :value="u.id">{{ u.label }}</option>
+                        </select>
+                    </div>
+                    <div class="scope-note">{{ globalTab ? '这一页是全局数据，不随会话选择改变。' : '选择会话可筛选往来、待发消息、任务和认知。' }}</div>
+                </div>
+                <details v-if="filterUmo" class="context-state">
+                    <summary>当前状态与生活主线<span>往来认知属于当前会话，生活主线由全部会话共享</span></summary>
+                    <div class="control-panel">
+                    <div>
+
+                        <label>本会话的往来认知（只读）</label>
+                        <textarea :value="l3.continuity" rows="6" readonly
+                                  style="background:#f8fafc; color:#64748b;"
+                                  placeholder="（这个会话还没有积累往来认知）"></textarea>
+                        <p style="font-size:12px; color:var(--text-light); margin-top:6px;">
+                            这是当前会话的往来摘要，只读查看。它与全局生活主线分开保存。
+                        </p>
+
+                        <div style="margin-top: 20px;">
+                            <label>生活主线（全局）</label>
+                            <textarea v-model="lifeStateText" rows="4"
+                                      placeholder="角色当前的位置、活动与处境"></textarea>
+                            <p style="font-size:12px; color:var(--text-light); margin-top:6px;">
+                                所有会话共用。点击保存后更新角色当前处境。
+                            </p>
+                        </div>
+
+                        <details class="state-plan">
+                            <summary>查看当前行程（只读）</summary>
+                            <textarea :value="lifePlanText" rows="3" readonly
+                                      style="font-family: monospace; font-size: 12px; background:#f8fafc; color:#64748b;"
+                                      placeholder="（没有安排）"></textarea>
+                            <p style="font-size:12px; color:var(--text-light); margin-top:6px;">
+                                行程由生活主线管理，生活经历可在「生活时间轴」查看。
+                            </p>
+                        </details>
+
+                        <div style="margin-top: 15px; display: flex; gap: 10px;">
+                            <button class="btn btn-primary" @click="saveL3">保存生活主线</button>
+                            <button class="btn btn-ghost" @click="resetClock">重置时钟</button>
+                        </div>
+                    </div>
+                    <div class="gauge-group">
+                        <div class="gauge-item">
+                            <div class="gauge-header"><span>本会话的主动联系意愿</span><span style="color: var(--primary);">{{(l3.willingness*100).toFixed(0)}}%</span></div>
+                            <input aria-label="主动联系意愿" type="range" v-model.number="l3.willingness" min="0" max="1" step="0.01">
+                            <button class="btn btn-ghost btn-sm" @click="saveWillingness">保存主动意愿</button>
+                        </div>
+                        <div v-if="l3.volatile?.length" style="margin-top: 10px;">
+                            <label>尚未合并的状态变化 ({{l3.volatile.length}})</label>
+                            <div style="background: #f1f5f9; padding: 12px; border-radius: 12px; font-size:12px; color: #64748b; max-height: 100px; overflow-y: auto;">
+                                <div v-for="(v, i) in l3.volatile" :key="i" style="margin-bottom: 4px;">· {{ v }}</div>
+                            </div>
+                            <button @click="clearVolatile" class="btn btn-danger btn-sm">清空待合并变化</button>
+                        </div>
+                    </div>
+                </div>
+
+                </details>
+                <nav class="tabs-nav" aria-label="光谱核心数据分类">
+                    <button v-for="t in tabs" :key="t.id" @click="switchTab(t.id)" :class="['tab-btn', {active: currentTab === t.id}]" :aria-current="currentTab === t.id ? 'page' : null">{{ t.label }}</button>
+                </nav>
+
+                <div class="tab-content">
+                    <div class="section-heading"><div><h2>{{ activeTab.label }} <span class="current-scope">{{ globalTab ? '全局' : (filterUmo ? '当前会话' : '全部会话') }}</span></h2><p>{{ activeTab.hint }}</p></div></div>
+                    <div v-if="!personDetail && !lifeDetail" class="data-toolbar">
+                        <div v-if="currentTab !== 'director' || drSub !== 'state'" class="search-box"><input aria-label="搜索当前已加载的记录" v-model="searchText" :placeholder="currentTab === 'director' ? '搜索剧情名称、正文或记录' : '搜索当前已加载的记录'"><button v-if="searchText" class="btn btn-ghost" @click="searchText = ''">清除</button></div>
+                        <label v-if="['intents','pending','entries'].includes(currentTab)" class="check-label"><input type="checkbox" v-model="showHistory">{{ currentTab === 'entries' ? '包含后台记录' : '包含已结束记录' }}</label>
+                    </div>
+                    <div v-if="selectionResource" class="selection-bar">
+                        <button v-if="!selection.mode" type="button" class="btn btn-ghost btn-sm" @click="selection.enter()">选择</button>
+                        <template v-else>
+                            <button type="button" class="btn btn-ghost btn-sm" :disabled="selection.busy" @click="selectPage">全选当前页</button>
+                            <button type="button" class="btn btn-ghost btn-sm" :disabled="selection.busy" @click="selectAll">全选筛选结果</button>
+                            <button type="button" class="btn btn-ghost btn-sm" :disabled="selection.busy" @click="selection.clear()">清空选择</button>
+                            <button type="button" class="btn btn-danger btn-sm" :disabled="!selection.count||selection.busy" @click="deleteSelected">{{currentTab==='tools'?'清除所选说明':'删除所选'}}</button>
+                            <button type="button" class="btn btn-ghost btn-sm" :disabled="selection.busy" @click="selection.exit()">取消</button>
+                            <span class="selection-count">已选 {{selection.count}} 条</span>
+                        </template>
+                    </div>
+                    <div v-if="loadError" class="notice error" role="alert">{{ loadError }} <button class="btn btn-sm" @click="refresh">重新加载</button></div>
+                    <div v-if="loadingData" class="list-loading" role="status">正在读取数据…</div>
+                    <div v-if="!loadingData" class="data-results">
+
+                    <div v-if="currentTab === 'intents'">
+                        <div style="display: flex; justify-content: flex-end; margin-bottom: 15px;"><button class="btn btn-primary btn-sm" @click="addIntent" v-if="filterUmo">添加任务 / 承诺</button></div>
+                        <div class="table-scroll"><table>
+                            <thead><tr><th>ID</th><th>任务/承诺摘要</th><th>状态</th><th>预计计划时间</th><th style="text-align: right;">操作</th></tr></thead>
+                            <tbody>
+                                <tr v-for="i in filteredDataList" :key="i.id">
+                                    <td style="font-family: monospace; color: var(--text-light);"><input v-if="selection.mode" type="checkbox" class="record-select" :aria-label="'选择记录 '+selectionKey(i)" :checked="selection.has(selectionKey(i))" @click.stop @change="selection.toggle(selectionKey(i),$event.target.checked)">#{{ i.id }}</td>
+                                    <td style="font-weight: 700;">{{ i.summary }}</td>
+                                    <td><span class="tag tag-l2">{{ statusLabel(i.status) }}</span></td>
+                                    <td style="font-size: 12px; color: var(--text-light);">{{ formatTs(i.not_before) }}</td>
+                                    <td style="text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+                                        <button @click="editIntent(i)" class="btn btn-ghost btn-sm">修正</button>
+                                        <button @click="cancelIntent(i.id)" v-if="i.status === 'waiting'" class="btn btn-danger btn-sm">取消</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table></div>
+                    </div>
+
+                    <div v-if="currentTab === 'pending'">
+                        <div class="table-scroll"><table>
+                            <thead><tr><th>ID</th><th>消息投递内容</th><th>状态</th><th>投递时刻</th><th style="text-align: right;">操作</th></tr></thead>
+                            <tbody>
+                                <tr v-for="p in filteredDataList" :key="p.id">
+                                    <td style="font-family: monospace; color: var(--text-light);"><input v-if="selection.mode" type="checkbox" class="record-select" :disabled="p.status==='sending'" :aria-label="'选择记录 '+selectionKey(p)" :checked="selection.has(selectionKey(p))" @click.stop @change="selection.toggle(selectionKey(p),$event.target.checked)">#{{ p.id }}</td>
+                                    <td style="font-weight: 600;">{{ p.content }}</td>
+                                    <td><span class="tag tag-l1">{{ ({waiting:"等待发送", sending:"发送中／结果待核对", uncertain:"发送中断，结果待核对", sent:"已送达", cancelled:"已作废"})[p.status] || p.status }}</span></td>
+                                    <td style="font-size: 12px; color: var(--text-light);">{{ formatTs(p.due_ts) }}</td>
+                                    <td style="text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+                                        <button v-if="p.status === 'uncertain'" @click="retryPending(p.id)" class="btn btn-ghost btn-sm">核对后恢复待发</button>
+                                        <button v-if="p.status !== 'sending'" @click="editPending(p)" class="btn btn-ghost btn-sm">修正</button>
+                                        <button @click="cancelPending(p.id)" v-if="p.status === 'waiting' || p.status === 'uncertain'" class="btn btn-danger btn-sm">作废</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table></div>
+                    </div>
+
+                    <div v-if="currentTab === 'memories'">
+                        <div v-if="!filterUmo" style="padding: 100px; text-align: center; color: var(--text-light); font-weight: 700;">请选定会话以管理长期认知</div>
+                        <div v-else>
+                            <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;"><button class="btn btn-primary" @click="addMemory">添加长期认知</button></div>
+                            <div class="memory-grid">
+                                <div v-for="m in filteredDataList" :key="m.id" class="memory-card"><input v-if="selection.mode" type="checkbox" class="record-select" :aria-label="'选择记录 '+selectionKey(m)" :checked="selection.has(selectionKey(m))" @click.stop @change="selection.toggle(selectionKey(m),$event.target.checked)">
+                                    <div style="font-weight: 700; margin-bottom: 12px; font-size: 15px;">{{ m.text }}</div>
+
+                                    <div v-if="m.source_entry_ids" style="font-size:12px; color: var(--text-light); margin-bottom: 10px;">
+                                        <button class="btn btn-link" @click="toggleSources(m)" :aria-expanded="!!sourceOpen[m.id]">
+                                            {{ sourceOpen[m.id] ? '▾' : '▸' }} 来源（{{ sourceCount(m) }} 条往来）
+                                        </button>
+                                        <div v-if="sourceOpen[m.id]" style="margin-top: 8px; padding: 8px 10px; background: #fff; border-radius: 10px; border: 1px solid var(--border);">
+                                            <div v-if="!sourceCache[m.id]" style="color: var(--text-light);">读取中…</div>
+                                            <div v-else-if="!sourceCache[m.id].length" style="color: var(--text-light);">这几条往来已被删除或查不到</div>
+                                            <div v-for="s in sourceCache[m.id]" :key="s.id" style="margin-bottom: 5px; line-height: 1.5;">
+                                                <span style="color: var(--text-light);">[{{ s.when }}; {{ s.who }}]</span> {{ s.text }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style="margin-bottom: 15px;">
+                                        <label style="margin-bottom: 5px; font-size:12px;">记忆重要程度 ({{(m.importance*100).toFixed(0)}}%)</label>
+                                        <input type="range" :value="m.importance" @change="updateMemoryImportance(m, $event.target.value)" min="0" max="1" step="0.05">
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <button @click="editMemory(m)" class="btn btn-ghost btn-sm">编辑文本</button>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="currentTab === 'entries'">
+                        <div v-for="e in filteredDataList" :key="e.id" class="log-item"><input v-if="selection.mode" type="checkbox" class="record-select" :aria-label="'选择记录 '+selectionKey(e)" :checked="selection.has(selectionKey(e))" @click.stop @change="selection.toggle(selectionKey(e),$event.target.checked)">
+                            <div class="log-meta">
+                                <span style="font-family: monospace;">{{ formatTs(e.ts) }} · <span :class="['tag', e.kind==='script'?'tag-l3':'tag-l1']">{{ kindLabel(e.kind) }}</span></span>
+                                <div style="display: flex; gap: 10px;">
+                                    <button @click="editEntry(e)" class="btn btn-ghost btn-sm">修正</button>
+                                    
+                                </div>
+                            </div>
+                            <div v-if="e.kind === 'script'" class="log-script">{{ e.text }}</div>
+                            <div v-else class="log-text">{{ e.text }}</div>
+                        </div>
+                    </div>
+
+                    <div v-if="currentTab === 'lives'">
+                        <div v-if="lifeDetail">
+                            <button class="btn btn-ghost btn-sm" @click="lifeDetail = null"
+                                    style="background:none; color:var(--primary); padding:0; margin-bottom:14px;">
+                                ← 返回时间轴
+                            </button>
+                            <div style="font-weight:800; font-size:16px; margin-bottom:6px;">
+                                {{ lifeDetail.life.title || '(未命名)' }}
+                                <span class="tag" :class="lifeDetail.life.kind === 'outing' ? 'tag-l2' : 'tag-l1'">
+                                    {{ lifeKindLabel(lifeDetail.life.kind) }}
+                                </span>
+                                <button class="btn btn-ghost btn-sm" @click="openLifeEdit(lifeDetail.life)"
+                                        style="background:none; color:var(--primary); padding:0; margin-left:8px; font-weight:700;">
+                                    编辑这一段
+                                </button>
+                                
+                            </div>
+                            <div style="font-size:12px; color:var(--text-light); margin-bottom:10px;">
+                                {{ formatTs(lifeDetail.life.started_at) }} →
+                                {{ lifeDetail.life.ended_at ? formatTs(lifeDetail.life.ended_at) : '进行中' }}
+                                <span v-if="lifeDetail.life.with_who"> · 跟 {{ lifeDetail.life.with_who }}</span>
+                            </div>
+                            <div v-if="lifeDetail.life.summary && !lifeEdit" class="alert-box" style="margin-bottom:14px;">
+                                {{ lifeDetail.life.summary }}
+                            </div>
+
+                            <div v-if="lifeEdit" class="wb-card-body"
+                                 style="border:1px solid var(--border); border-radius:14px; margin-bottom:16px;">
+                                <div class="wb-row wb-head-row">
+                                    <div class="wb-col wb-f1">
+                                        <label>标题
+<input type="text" v-model="lifeEdit.title"
+                                               placeholder="例：和朋友骑车去小吃摊的那晚"></label>
+                                    </div>
+                                    <div class="wb-col wb-f1">
+                                        <label>类型
+<select v-model="lifeEdit.kind">
+                                            <option value="home">在家</option>
+                                            <option value="outing">外出</option>
+                                        </select></label>
+                                    </div>
+                                    <div class="wb-col wb-f1">
+                                        <label>跟谁
+<input type="text" v-model="lifeEdit.with_who" placeholder="留空 = 一个人"></label>
+                                    </div>
+                                </div>
+                                <div class="wb-row">
+                                    <div class="wb-col wb-f1">
+                                        <label>开始（YYYY-MM-DDTHH:mm:ss）
+<input type="text" v-model="lifeEdit.started_at"></label>
+                                    </div>
+                                    <div class="wb-col wb-f1">
+                                        <label>结束（留空 = 进行中）
+<input type="text" v-model="lifeEdit.ended_at"
+                                               placeholder="留空 = 这一段还没结束"></label>
+                                    </div>
+                                </div>
+                                <div class="wb-col" style="margin-bottom:12px;">
+                                    <label>概述
+<textarea rows="3" v-model="lifeEdit.summary"></textarea></label>
+                                </div>
+                                <div style="display:flex; gap:10px;">
+                                    <button class="btn btn-primary btn-sm" @click="saveLifeEdit">保存</button>
+                                    <button class="btn btn-ghost btn-sm" @click="cancelLifeEdit">取消</button>
+                                </div>
+                                <p style="color:var(--text-light); font-size:12px; margin:10px 0 0;">
+                                    外出锁不在这里改 —— 它和全局的主线所有权是一对，
+                                    要动请回时间轴用「解除外出锁（归家）」。
+                                </p>
+                            </div>
+                            <div v-if="lifeDetail.total > lifeDetail.shown"
+                                 style="font-size:12px; color:#f59e0b; margin-bottom:12px;">
+                                共 {{ lifeDetail.total }} 条，此处显示最早的 {{ lifeDetail.shown }} 条
+                            </div>
+                            <div v-for="e in lifeDetail.entries" :key="e.id" class="log-item"><input v-if="selection.mode" type="checkbox" class="record-select" :aria-label="'选择记录 '+selectionKey(e)" :checked="selection.has(selectionKey(e))" @click.stop @change="selection.toggle(selectionKey(e),$event.target.checked)">
+                                <div class="log-meta">
+                                    <span style="font-family: monospace;">
+                                        {{ formatTs(e.ts) }} ·
+                                        <span :class="['tag', e.kind==='script'?'tag-l3':'tag-l1']">{{ kindLabel(e.kind) }}</span>
+                                        <span v-if="e.sender" style="color:var(--text-light);"> · {{ e.sender }}</span>
+                                    </span>
+                                    <div style="display:flex; gap:10px;">
+                                        <button @click="editLifeEntry(e)" class="btn btn-ghost btn-sm">修正</button>
+                                        
+                                    </div>
+                                </div>
+                                <div v-if="e.kind === 'script'" class="log-script">{{ e.text }}</div>
+                                <div v-else class="log-text">{{ e.text }}</div>
+                            </div>
+                        </div>
+
+                        <div v-else>
+                            <div style="display:flex; gap:10px; margin-bottom:14px; align-items:center;">
+                                <button class="btn btn-ghost btn-sm" @click="fetchLives">刷新</button>
+
+                                <button class="btn btn-primary btn-sm" @click="unlockLife">
+                                    解除外出锁（归家）
+                                </button>
+                                <span v-if="lifeOwner && lifeOwner.session"
+                                      style="font-size:12px; color:#f59e0b; font-weight:700;">
+                                    当前锁在 {{ lifeOwner.session }}<span v-if="lifeOwner.with">，跟 {{ lifeOwner.with }}</span>
+                                    —— 锁着的时候主动消息只往那个会话发
+                                </span>
+                            </div>
+                            <p style="color:var(--text-light); font-size:13px; margin-bottom:14px;">
+                                角色在任意时刻只有一段当前生活经历。
+                                边界是 外出 · 归家 · 入睡 · 醒来 —— 日记按生活段归属，
+                                不按会话，所以从任何会话看到的都是她此刻这段生活的内心。
+                            </p>
+                            <div class="table-scroll"><table>
+                                <thead>
+                                    <tr>
+                                        <th>时间</th><th>类型</th><th>标题</th>
+                                        <th>同行</th><th>时长</th><th style="text-align:right;">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="l in filteredLives" :key="l.life_id">
+                                        <td style="font-family:monospace; font-size:12px; color:var(--text-light);"><input v-if="selection.mode" type="checkbox" class="record-select" :aria-label="'选择记录 '+selectionKey(l)" :checked="selection.has(selectionKey(l))" @click.stop @change="selection.toggle(selectionKey(l),$event.target.checked)">
+                                            {{ formatTs(l.started_at) }}
+                                        </td>
+                                        <td>
+                                            <span class="tag" :class="l.kind === 'outing' ? 'tag-l2' : 'tag-l1'">
+                                                {{ lifeKindLabel(l.kind) }}
+                                            </span>
+                                            <span v-if="l.ongoing" class="tag tag-l3" style="margin-left:4px;">进行中</span>
+                                        </td>
+                                        <td style="font-weight:700;">{{ l.title || '—' }}</td>
+                                        <td style="font-size:12px; color:var(--text-light);">{{ l.with_who || '—' }}</td>
+                                        <td style="font-size:12px; color:var(--text-light);">{{ lifeDur(l) }}</td>
+                                        <td style="text-align:right; white-space:nowrap;">
+                                            <button @click="openLife(l.life_id)" class="btn btn-ghost btn-sm">查看</button>
+                                            <button @click="editLifeTitle(l)" class="btn btn-ghost btn-sm">改名</button>
+                                            
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table></div>
+                            <p v-if="!lifeList.length" style="padding:60px; text-align:center; color:var(--text-light); font-weight:700;">
+                                还没有生活段
+                            </p>
+                        </div>
+                    </div>
+
+                    <div v-if="currentTab === 'director'">
+                        <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+                            <button v-for="s in [
+                                        { id: 'storylets', label: '剧情片段' },
+                                        { id: 'fires', label: '触发记录' },
+                                        { id: 'threads', label: '伏笔线索' },
+                                        { id: 'state', label: '故事状态' },
+                                    ]" :key="s.id"
+                                    class="btn btn-sm" :class="drSub === s.id ? 'btn-primary' : 'btn-ghost'"
+                                    @click="drSub = s.id">{{ s.label }}</button>
+                            <button class="btn btn-ghost btn-sm" @click="fetchDirector">刷新</button>
+                        </div>
+
+                        <div v-if="drSub === 'storylets'">
+                            <div class="data-toolbar"><button type="button" class="btn btn-primary" @click="openStorylet(null)">新建剧情片段</button><span class="wb-hint">共 {{drStorylets.length}} 条 · 当前显示 {{drVisibleStorylets.length}} 条；删除时先点击上方“选择”。</span></div>
+                            <form v-if="drEdit" class="director-editor" @submit.prevent="saveStorylet">
+                                <h3>{{drEdit.sid ? '编辑剧情片段' : '新建剧情片段'}}</h3>
+                                <label>片段名称<input v-model="drEdit.title" required placeholder="例如：傍晚的雨声"></label>
+                                <label class="check-label"><input type="checkbox" v-model="drEdit.enabled">启用此片段</label>
+                                <p class="wb-hint">新片段默认停用。启用后，导演开启且条件满足时才会考虑触发。</p>
+                                <div v-for="(text,index) in drEdit.paragraphs" :key="index"><label>剧情正文{{drEdit.paragraphs.length>1 ? ' · 第'+(index+1)+'段' : ''}}<textarea v-model="drEdit.paragraphs[index]" rows="4" required placeholder="我听见窗外雨声，原本的安排可能需要调整。"></textarea></label><button v-if="drEdit.paragraphs.length>1" type="button" class="btn btn-ghost btn-sm" @click="drEdit.paragraphs.splice(index,1)">移除这一段</button></div>
+                                <button type="button" class="btn btn-ghost btn-sm" @click="drEdit.paragraphs.push('')">添加下一段正文</button>
+                                <p class="wb-hint">多段正文按顺序触发，保留原片段的分段顺序。正文作为角色的剧情背景。</p>
+                                <h4>触发条件</h4>
+                                <div class="data-toolbar"><button type="button" class="btn btn-sm" :class="drEdit.conditionMode==='rules'?'btn-primary':'btn-ghost'" @click="setDirectorConditionMode('rules')">条件编辑</button><button type="button" class="btn btn-sm" :class="drEdit.conditionMode==='json'?'btn-primary':'btn-ghost'" @click="setDirectorConditionMode('json')">自定义 JSON</button></div>
+                                <div v-if="drEdit.conditionMode==='rules'">
+                                    <label>条件组合<select v-model="drEdit.match"><option value="all">全部满足</option><option value="any">任意一条满足</option></select></label>
+                                    <div v-for="(rule,index) in drEdit.rules" :key="index" class="director-condition">
+                                        <template v-if="rule.type==='window'"><strong>时间段（北京时间，支持跨午夜）</strong><div class="director-grid"><label>从<input type="time" v-model="rule.from" required></label><label>到<input type="time" v-model="rule.to" required></label></div></template>
+                                        <template v-else-if="rule.type==='threshold'"><div class="director-grid"><label>状态量<select v-model="rule.var"><option v-for="field in directorConditionFields" :key="field[0]" :value="field[0]">{{field[1]}}</option><option v-if="!directorConditionFields.some(field=>field[0]===rule.var)" :value="rule.var">{{rule.var}}</option></select></label><label>比较方式<select v-model="rule.op"><option value=">=">不少于</option><option value="<=">不多于</option><option value=">">大于</option><option value="<">小于</option><option value="==">等于</option><option value="!=">不等于</option></select></label><label>数值<input type="number" step="any" v-model.number="rule.value" required></label></div></template>
+                                        <template v-else-if="rule.type==='flag'"><div class="director-grid"><label>状态<select v-model="rule.var"><option value="asleep">正在睡眠</option><option value="has_owner">当前生活已有所属会话</option><option value="has_ending">已有剧情结尾</option></select></label><label>要求<select v-model="rule.equals"><option :value="true">是</option><option :value="false">否</option></select></label></div></template>
+                                        <template v-else><div class="director-grid"><label>状态名称<input v-model="rule.var" required placeholder="例如 scene_id"></label><label>等于<input v-model="rule.value" required placeholder="例如 default"></label></div></template>
+                                        <button type="button" class="btn btn-ghost btn-sm" @click="drEdit.rules.splice(index,1)">移除条件</button>
+                                    </div>
+                                    <div class="data-toolbar"><button type="button" class="btn btn-ghost btn-sm" @click="addDirectorCondition('window')">添加时间段</button><button type="button" class="btn btn-ghost btn-sm" @click="addDirectorCondition('threshold')">添加数值条件</button><button type="button" class="btn btn-ghost btn-sm" @click="addDirectorCondition('flag')">添加状态条件</button><button type="button" class="btn btn-ghost btn-sm" @click="addDirectorCondition('set')">添加场景条件</button></div>
+                                    <p v-if="!drEdit.rules.length" class="wb-hint">未添加条件时，片段仍受导演的睡眠、间隔和介入额度控制。</p>
+                                </div>
+                                <div v-else><label>完整条件 JSON<textarea v-model="drEdit.conditionJSON" rows="8" required spellcheck="false"></textarea></label><p class="wb-hint">保留 all / any、分层判断及已有自定义字段。模型判断条件仍需相应导演设置开启。</p></div>
+                                <details class="advanced-options"><summary>前置片段与重复间隔</summary>
+                                    <label>这些片段触发后才考虑当前片段<select v-model="drEdit.depends_on" multiple><option v-for="st in drStorylets.filter(st=>st.sid!==drEdit.sid)" :key="st.sid" :value="st.sid">{{storyletTitle(st)}}</option><option v-for="sid in drEdit.depends_on.filter(sid=>!drStorylets.some(st=>st.sid===sid))" :key="sid" :value="sid">{{sid}}（当前未找到）</option></select></label>
+                                    <label class="check-label"><input type="checkbox" v-model="drEdit.repeatable">正文结束后允许重复触发</label><div class="director-grid"><label>再次触发前的导演回合数<input type="number" min="0" step="1" v-model.number="drEdit.k_turns" required></label><label>再次触发前的分钟数<input type="number" min="0" step="1" v-model.number="drEdit.k_minutes" required></label><label>目标会话至少安静几分钟<input type="number" min="0" step="1" v-model.number="drEdit.min_idle_minutes" required></label><label>安静超过几分钟停止触发（0不限）<input type="number" min="0" step="1" v-model.number="drEdit.max_idle_minutes" required></label></div>
+                                </details>
+                                <details class="advanced-options"><summary>作用范围、选择权重与剧情效果</summary><div class="director-grid">
+                                    <label>作用范围<select v-model="drEdit.scope"><option value="global">全局候选</option><option v-for="umo in umos" :key="umo" :value="umo">{{umo}}</option><option v-if="drEdit.scope!=='global'&&!umos.includes(drEdit.scope)" :value="drEdit.scope">{{drEdit.scope}}</option></select></label>
+                                    <label>片段类型<input v-model="drEdit.kind" required placeholder="action：普通片段；fallback：回退片段"></label><label>优先级<input type="number" step="1" v-model.number="drEdit.priority" required></label><label>选择权重<input type="number" min="0" step="any" v-model.number="drEdit.weight" required></label>
+                                    <label>要求的当前场景<input v-model="drEdit.scene_id" placeholder="留空不限制"></label><label>触发后的场景<input v-model="drEdit.got_scene_id" placeholder="留空不切换"></label><label>结尾名称<input v-model="drEdit.ending_name" placeholder="普通片段留空"></label></div>
+                                    <label>效果 JSON<textarea v-model="drEdit.effects" rows="5" spellcheck="false"></textarea></label><p class="wb-hint">沿用导演支持的剧情效果，不执行脚本。编辑现有片段时保留其他已有元数据。</p>
+                                </details>
+                                <div class="data-toolbar"><button type="submit" class="btn btn-primary" :disabled="drSaving">{{drSaving?'保存中…':'保存剧情片段'}}</button><button type="button" class="btn btn-ghost" :disabled="drSaving" @click="drEdit=null">取消</button></div>
+                            </form>
+                            <p style="color:var(--text-light); font-size:12px; margin:0 0 10px;">
+                                剧情正文提供给角色参考；条件和效果采用 JSON 格式，编辑时请保持结构有效。
+                            </p>
+                            <div class="table-scroll"><table>
+                                <thead><tr>
+                                    <th>名称</th><th>状态 / 类型</th><th>优先级</th><th>权重</th>
+                                    <th>正文</th><th style="text-align:right;">操作</th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr v-for="st in drVisibleStorylets" :key="st.sid">
+                                        <td style="font-family:monospace; font-size:12px; font-weight:700;"><input v-if="selection.mode" type="checkbox" class="record-select" :aria-label="'选择记录 '+selectionKey(st)" :checked="selection.has(selectionKey(st))" @click.stop @change="selection.toggle(selectionKey(st),$event.target.checked)">
+                                            {{ storyletTitle(st) }}<div class="wb-hint">{{st.sid}}</div><div v-if="st.problem" class="notice error">不可触发：{{st.problem}}</div>
+                                        </td>
+                                        <td><span class="tag" :class="st.kind === 'fallback' ? 'tag-l2' : 'tag-l1'">
+                                            {{ st.enabled ? '启用' : '停用' }} · {{ st.kind }}</span></td>
+                                        <td>{{ st.priority }}</td>
+                                        <td>{{ st.weight }}</td>
+                                        <td style="font-size:12px; max-width:420px; white-space:pre-wrap;">{{ storyletText(st) }}</td>
+                                        <td style="text-align:right; white-space:nowrap;">
+                                            <button class="btn btn-ghost btn-sm" @click="openStorylet(st)">编辑</button>
+                                            <button class="btn btn-sm" :class="st.enabled ? 'btn-danger' : 'btn-primary'"
+                                                    @click="toggleStorylet(st)">{{ st.enabled ? '禁用' : '启用' }}</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table></div>
+                            <p v-if="!drVisibleStorylets.length" class="wb-hint">{{drStorylets.length?'没有匹配的剧情片段，请调整搜索。':'尚无剧情片段，点击“新建剧情片段”开始添加。'}}</p>
+                        </div>
+
+                        <div v-if="drSub === 'fires'">
+                            <p style="color:var(--text-light); font-size:12px; margin:0 0 10px;">
+                                触发记录只读，用于核对剧情实际执行的过程。
+                                「未发出」表示该片段没有形成实际送达的消息。
+                            </p>
+                            <div class="table-scroll"><table>
+                                <thead><tr>
+                                    <th>#</th><th>时刻</th><th>sid</th><th>类型</th>
+                                    <th>注入位置</th><th>发出</th><th>正文</th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr v-for="f in drVisibleFires" :key="f.id">
+                                        <td style="font-family:monospace; color:var(--text-light);"><input v-if="selection.mode" type="checkbox" class="record-select" :aria-label="'选择记录 '+selectionKey(f)" :checked="selection.has(selectionKey(f))" @click.stop @change="selection.toggle(selectionKey(f),$event.target.checked)">{{ f.id }}</td>
+                                        <td style="font-size:12px; color:var(--text-light);">{{ formatTs(f.ts) }}</td>
+                                        <td style="font-family:monospace; font-size:12px; font-weight:700;">{{ f.sid }}</td>
+                                        <td><span class="tag">{{ f.kind }}</span></td>
+                                        <td style="font-family:monospace; font-size:12px;">{{ (f.umo || '').replace('default:', '') }}</td>
+                                        <td>
+                                            <span class="tag" :class="f.delivered ? 'tag-l1' : 'tag-l3'">
+                                                {{ f.delivered ? '已发出' : '未发出' }}</span>
+                                        </td>
+                                        <td style="font-size:12px; max-width:360px; white-space:pre-wrap;">{{ f.narrative }}</td>
+                                    </tr>
+                                </tbody>
+                            </table></div>
+                        </div>
+
+                        <div v-if="drSub === 'threads'">
+                            <div class="table-scroll"><table>
+                                <thead><tr>
+                                    <th>tid</th><th>标题</th><th>状态</th>
+                                    <th>计划回收</th><th>开始阶段</th><th>预计阶段数</th>
+                                </tr></thead>
+                                <tbody>
+                                    <tr v-for="t in drVisibleThreads" :key="t.tid">
+                                        <td style="font-family:monospace; font-size:12px; font-weight:700;"><input v-if="selection.mode" type="checkbox" class="record-select" :disabled="currentTab==='tools' && !t.note" :aria-label="'选择记录 '+selectionKey(t)" :checked="selection.has(selectionKey(t))" @click.stop @change="selection.toggle(selectionKey(t),$event.target.checked)">{{ t.tid }}</td>
+                                        <td style="font-size:12px;">{{ t.title }}</td>
+                                        <td><span class="tag" :class="t.state === 'paid' ? 'tag-l1' : 'tag-l2'">
+                                            {{ t.state }}</span></td>
+                                        <td style="font-size:12px; max-width:320px;">{{ t.planned_payoff }}</td>
+                                        <td>{{ t.open_beat }}</td>
+                                        <td>{{ t.due_beats }}</td>
+                                    </tr>
+                                </tbody>
+                            </table></div>
+                        </div>
+
+                        <div v-if="drSub === 'state'">
+                            <pre style="background:#f8fafc; border:1px solid var(--border); border-radius:12px;
+                                        padding:14px; font-size:12px; overflow:auto; max-height:520px;">{{ JSON.stringify(drState, null, 2) }}</pre>
+                        </div>
+                    </div>
+
+                    <div v-if="currentTab === 'persons'">
+                        <div v-if="!personDetail">
+                            <p style="color:var(--text-light); font-size:13px; margin-bottom:14px;">
+                                同一个人在私聊和群聊中共用一份档案，使用平台用户 ID 识别身份。
+                                点开某人可查看他在哪些场合出现过、以及关于他的长期认知。
+                            </p>
+                            <div class="table-scroll"><table>
+                                <thead><tr><th>称谓</th><th>账号</th><th>好感度</th><th>信任度</th><th>场合</th><th>认知</th><th style="text-align:right;">操作</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="p in filteredDataList" :key="p.person_id">
+                                        <td style="font-weight:700;"><input v-if="selection.mode" type="checkbox" class="record-select" :disabled="p.status==='sending'" :aria-label="'选择记录 '+selectionKey(p)" :checked="selection.has(selectionKey(p))" @click.stop @change="selection.toggle(selectionKey(p),$event.target.checked)">{{ p.name || '(无名)' }}</td>
+                                        <td style="font-family:monospace; font-size:12px; color:var(--text-light);">{{ p.person_id }}</td>
+                                        <td><span class="tag" :class="p.affinity >= 0.7 ? 'tag-l1' : 'tag-l2'">{{ p.affinity.toFixed(2) }}</span></td>
+                                        <td><span class="tag tag-l2">{{ p.trust.toFixed(2) }}</span></td>
+                                        <td style="font-size:12px; color:var(--text-light);">{{ p.session_count }} 处</td>
+                                        <td style="font-size:12px; color:var(--text-light);">{{ p.memory_count }} 条</td>
+                                        <td style="text-align:right;">
+                                            <button class="btn btn-ghost btn-sm" @click="openPerson(p.person_id)">详情</button>
+                                            
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table></div>
+                            <p v-if="!dataList.length" style="color:var(--text-light); font-size:13px; margin-top:12px;">
+                                暂无人物档案。档案在收到带真实发送者 ID 的消息时自动建立；
+                                收到新消息后可在这里查看。
+                            </p>
+                        </div>
+
+                        <div v-else>
+                            <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+                                <button class="btn btn-ghost btn-sm" @click="personDetail = null">← 返回列表</button>
+                                <strong style="font-size:16px;">{{ personDetail.person.name || '(无名)' }}</strong>
+                                <span style="font-family:monospace; font-size:12px; color:var(--text-light);">{{ personDetail.person.person_id }}</span>
+                            </div>
+
+                            <div class="grid-2" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                                <div class="stat-card">
+                                    <div style="font-size:12px; color:var(--text-light);">好感度（跨场合）</div>
+                                    <div style="font-size:22px; font-weight:800;">{{ Number(personDetail.person.affinity).toFixed(2) }}</div>
+                                    <input type="range" min="0" max="1" step="0.01" v-model.number="personDetail.person.affinity" style="width:100%;">
+                                </div>
+                                <div class="stat-card">
+                                    <div style="font-size:12px; color:var(--text-light);">信任度（跨场合）</div>
+                                    <div style="font-size:22px; font-weight:800;">{{ Number(personDetail.person.trust).toFixed(2) }}</div>
+                                    <input type="range" min="0" max="1" step="0.01" v-model.number="personDetail.person.trust" style="width:100%;">
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom:14px;">
+                                <label style="font-size:12px; color:var(--text-light);">整体印象</label>
+                                <textarea v-model="personDetail.person.impression" rows="2"
+                                          placeholder="一两句：她对这个人的整体印象"
+                                          style="width:100%; margin-top:6px;"></textarea>
+                            </div>
+                            <button class="btn btn-primary btn-sm" @click="savePerson" style="margin-bottom:18px;">保存档案</button>
+
+                            <h4 style="font-size:13px; color:var(--text-light);">出现过的场合</h4>
+                            <div class="table-scroll"><table style="margin-bottom:18px;">
+                                <thead><tr><th>会话</th><th>发言数</th><th>最近出现</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="s in personDetail.sessions" :key="s.umo">
+                                        <td style="font-family:monospace; font-size:12px;">{{ s.umo }}</td>
+                                        <td>{{ s.msg_count }}</td>
+                                        <td style="font-size:12px; color:var(--text-light);">{{ formatTs(s.last_seen) }}</td>
+                                    </tr>
+                                </tbody>
+                            </table></div>
+
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <h4 style="font-size:13px; color:var(--text-light);">关于他的长期认知</h4>
+                                <button class="btn btn-ghost btn-sm" @click="addPersonMemory">+ 添加</button>
+                            </div>
+                            <p style="color:var(--text-light); font-size:12px; margin:6px 0 10px;">
+                                「私聊」表示该认知来自私下交流，群聊中的召回受可见范围限制。
+                            </p>
+                            <div class="table-scroll"><table>
+                                <thead><tr><th>内容</th><th>来源</th><th style="text-align:right;">操作</th></tr></thead>
+                                <tbody>
+                                    <tr v-for="m in personDetail.memories" :key="m.id">
+                                        <td><input v-if="selection.mode" type="checkbox" class="record-select" :aria-label="'选择记录 '+selectionKey(m)" :checked="selection.has(selectionKey(m))" @click.stop @change="selection.toggle(selectionKey(m),$event.target.checked)">{{ m.text }}</td>
+                                        <td><span class="tag" :class="m.scope === 'private' ? 'tag-l3' : 'tag-l1'">
+                                            {{ m.scope === 'private' ? '私聊' : '公开' }}</span></td>
+                                        <td style="text-align:right;">
+                                            
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table></div>
+                        </div>
+                    </div>
+
+                    <div v-if="currentTab === 'tools'">
+                        <p style="color:var(--text-light); font-size:12px; margin:0 0 10px;">
+                            这里显示已注册的工具。新扩展注册工具后会自动列出，来源显示在对应列。
+                            数据源：{{ toolsSource || '…' }}。
+                            <span v-if="toolsOrphans.length">
+                                <br>⚠️ 下面这些名字写了用法、但已经不在工具表里，
+                                <b>进提示词时会被跳过</b>：<code>{{ toolsOrphans.join('、') }}</code>
+                            </span>
+                        </p>
+                        <div class="table-scroll"><table>
+                            <thead><tr>
+                                <th>工具名</th><th>自带说明</th><th>来源</th>
+                                <th>我写的用法</th><th style="text-align:right;">操作</th>
+                            </tr></thead>
+                            <tbody>
+                                <tr v-for="t in filteredTools" :key="t.name">
+                                    <td style="font-family:monospace; font-size:12px; font-weight:700;"><input v-if="selection.mode" type="checkbox" class="record-select" :disabled="currentTab==='tools' && !t.note" :aria-label="'选择记录 '+selectionKey(t)" :checked="selection.has(selectionKey(t))" @click.stop @change="selection.toggle(selectionKey(t),$event.target.checked)">
+                                        {{ t.name }}<span v-if="!t.active" class="tag tag-l3" style="margin-left:6px;">已停用</span>
+                                    </td>
+                                    <td style="font-size:12px; color:var(--text-light); max-width:340px;">{{ t.description || '（自带说明为空）' }}</td>
+                                    <td style="font-size:12px; color:var(--text-light);">{{ t.source || '—' }}</td>
+                                    <td style="font-size:12px; max-width:260px;">{{ t.note || '（只用自带说明）' }}</td>
+                                    <td style="text-align:right;">
+                                        <button class="btn btn-ghost btn-sm" @click="editToolNote(t)">写用法</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table></div>
+                        <p v-if="!toolsList.length" style="color:var(--text-light); font-size:12px; text-align:center; padding:20px;">
+                            没读到任何工具（数据源：{{ toolsSource || '未知' }}）。<br>
+                            如提示读取失败，请检查「运行日志」。
+                        </p>
+                    </div>
+
+                    <div v-if="currentTab === 'worldbook'">
+                        <p class="wb-hint">
+                            多本世界书分别保存，只有选为全局书或当前书的内容参与触发。同一个角色的所有会话共用这两项选择，最多同时使用两本。
+                            <span v-if="!wbConfig.enabled" style="color:#dc2626;">
+                                世界书尚未启用。可在「功能设置 → 世界书」开启，当前保存的条目会保留。
+                            </span>
+                        </p>
+                        <section class="wb-library" aria-label="世界书管理">
+                            <div class="wb-selection-row">
+                                <label>全局世界书<select v-model="wbSelection.global_book"><option :value="null">不使用</option><option v-for="b in wbBooks" :value="b.id">{{b.name}}</option></select></label>
+                                <label>当前世界书<select v-model="wbSelection.current_book"><option :value="null">不使用</option><option v-for="b in wbBooks" :value="b.id">{{b.name}}</option></select></label>
+                                <label>两本书排列方式<select v-model="wbSelection.strategy"><option value="order">合并后按条目顺序</option><option value="global_first">全局书优先</option><option value="current_first">当前书优先</option></select></label>
+                                <button class="btn btn-primary" @click="saveWbSelection">保存使用设置</button>
+                            </div>
+                            <div class="wb-book-toolbar">
+                                <label class="wb-book-picker">正在编辑<select v-model.number="wbBookId" @change="changeWbBook"><option :value="0" disabled>请选择或新建世界书</option><option v-for="b in wbBooks" :value="b.id">{{b.name}} · {{b.count}} 条</option></select></label>
+                                <div class="wb-actions"><button type="button" class="btn btn-ghost btn-sm" @click="manageBooks=!manageBooks">{{manageBooks?'返回条目':'管理书库'}}</button><button class="btn btn-primary btn-sm" @click="saveWbBook(false)">新建书</button><button class="btn btn-ghost btn-sm" :disabled="!wbBookId" @click="saveWbBook(true)">重命名</button><button class="btn btn-ghost btn-sm" :disabled="!wbBookId" @click="duplicateWbBook">复制书</button></div>
+                            </div>
+                            <div class="wb-book-toolbar">
+                                <div class="wb-actions"><select v-model="wbImportMode" aria-label="导入方式"><option value="new">导入为新书</option><option value="append">追加到正在编辑的书</option><option value="replace">替换正在编辑的书</option></select><label class="btn btn-ghost btn-sm">导入 JSON<input type="file" accept=".json,application/json" hidden @change="importWbBook"></label></div>
+                                <div class="wb-actions"><button class="btn btn-ghost btn-sm" :disabled="!wbBookId" @click="exportWbBook('native')">导出完整格式</button><button class="btn btn-ghost btn-sm" :disabled="!wbBookId" @click="exportWbBook('tavern')">导出通用条目格式</button></div>
+                            </div>
+                            <p class="wb-hint">正在编辑的书不会自动启用。新建或导入后，请在上方选择使用；同一本书选中两次也只注入一次。</p>
+                            <details v-if="wbImportWarnings.length" class="advanced-options" open><summary>导入转换说明（{{wbImportWarnings.length}}）</summary><p v-for="warning in wbImportWarnings" class="wb-hint">{{warning}}</p></details>
+                        </section>
+                        <div class="wb-toolbar">
+                            <button class="btn btn-primary btn-sm" :disabled="!wbBookId" @click="addWorldbook">+ 新建条目</button>
+                            <button class="btn btn-ghost btn-sm" @click="fetchWorldbook">刷新</button>
+                            <span class="wb-count">{{ wbCurrentBook?.count || 0 }} 条 · {{ wbBooks.length }} 本书</span>
+                        </div>
+                        <details class="advanced-options wb-preview">
+                            <summary>触发预览 · 不调用模型、不修改激活状态</summary>
+                            <textarea v-model="wbPreviewText" rows="3" placeholder="输入一条消息，查看当前使用的两本书会注入哪些内容"></textarea>
+                            <div class="wb-actions">
+                                <select v-model="wbPreviewGeneration" aria-label="预览调用场景">
+                                    <option value="normal">对话请求</option>
+                                    <option value="background">后台生活</option>
+                                </select>
+                                <button class="btn btn-primary btn-sm" @click="previewWbBook">预览当前使用的世界书</button>
+                                <span class="wb-hint">只预览普通触发；语义匹配按实际调用设置生效。概率条目每次结果可能不同。</span>
+                            </div>
+                            <div v-if="wbPreview">
+                                <p class="wb-hint">使用 {{wbPreview.selected_books.length}} 本 · 估算 {{wbPreview.used_tokens}} / {{wbPreview.budget}} token</p>
+                                <div v-for="row in wbPreview.entries" class="wb-preview-item">{{row.title || '无标题'}} · {{row.reason}} · 扫描 {{row.step + 1}}</div>
+                                <details v-for="block in wbPreview.blocks" class="advanced-options" open>
+                                    <summary>{{block.position}} · 注入原文</summary>
+                                    <pre class="wb-preview-text">{{block.text}}</pre>
+                                </details>
+                                <p v-if="!wbPreview.blocks.length" class="wb-hint">本次没有入选正文。</p>
+                            </div>
+                        </details>
+
+                        <div v-if="manageBooks" class="table-scroll"><table><thead><tr><th>世界书</th><th>条目数量</th></tr></thead><tbody><tr v-for="book in wbBooks" :key="book.id"><td><input v-if="selection.mode" type="checkbox" class="record-select" :aria-label="'选择记录 '+selectionKey(book)" :checked="selection.has(selectionKey(book))" @click.stop @change="selection.toggle(selectionKey(book),$event.target.checked)">{{book.name}}</td><td>{{book.count}}</td></tr></tbody></table></div>
+                        <div v-if="!manageBooks" v-for="c in wbCards" :key="c.id"
+                             class="wb-card"
+                             :class="{'wb-card-open': wbIsOpen(c), 'wb-card-off': !c.enabled}">
+
+                            <div class="wb-card-head" @click="toggleWbCard(c)"><input v-if="selection.mode" type="checkbox" class="record-select" :aria-label="'选择记录 '+selectionKey(c)" :checked="selection.has(selectionKey(c))" @click.stop @change="selection.toggle(selectionKey(c),$event.target.checked)">
+                                <span class="wb-caret">{{ wbIsOpen(c) ? '▾' : '▸' }}</span>
+                                <button class="btn btn-ghost btn-sm"
+                                      :title="c.enabled ? '停用这条' : '启用这条'"
+                                      @click.stop="toggleWorldbook(c)">{{ c.enabled ? '停用' : '启用' }}</button>
+                                <button class="wb-name btn btn-link" @click.stop="toggleWbCard(c)" :aria-expanded="wbIsOpen(c)">{{ c.title || (c.text || '').slice(0, 24) || '（无标题）' }}</button>
+                                <span class="wb-sum">{{ wbStateLabel(c) }}</span>
+                                <span class="wb-sum">{{ wbPositions[c.position] || '生活与场景' }}</span>
+                                <span class="wb-sum" title="插入优先级 order">顺序 {{ c.order_value }}</span>
+                                <span class="wb-sum" title="触发概率">触发 {{ c.probability }}%</span>
+                                <span v-if="c.tokens" class="wb-sum wb-sum-tok" title="正文的 token 估算">≈{{ c.tokens }}</span>
+                                
+                            </div>
+
+                            <div v-if="wbIsOpen(c)" class="wb-card-body">
+
+                                <div class="wb-row wb-head-row">
+                                    <textarea class="wb-title" rows="1" v-model="wbEdit.title"
+                                              placeholder="备注标题（只给你看，不进提示词）"></textarea>
+                                    <select class="wb-state" v-model="wbState" title="条目状态">
+                                        <option value="normal">🟢 普通</option>
+                                        <option value="constant">🔵 常驻</option>
+                                        <option value="vectorized">🔗 语义</option>
+                                    </select>
+                                    <label class="wb-mini">注入位置
+                                        <select v-model="wbEdit.position" style="width:150px;" title="均在本轮临时背景内，不修改系统前缀，不插入过去的聊天消息。">
+                                            <option value="core">基础背景 · 背景开头</option>
+                                            <option value="l3">生活与场景 · 生活背景中</option>
+                                            <option value="person">人物资料 · 人物档案后</option>
+                                            <option value="turn">本轮补充 · 背景末尾</option>
+                                        </select>
+                                    </label>
+                                    <label class="wb-mini">注入顺序
+                                        <input type="number" class="wb-num-in" v-model.number="wbEdit.order_value"></label>
+                                    <label class="wb-mini">触发概率 %
+                                        <input type="number" class="wb-num-in" min="0" max="100"
+                                               :disabled="!wbUseProb" v-model.number="wbEdit.probability"></label>
+                                </div>
+
+                                <div class="wb-row">
+                                    <label class="wb-col wb-f1">所属世界书<select v-model.number="wbEdit.book_id"><option v-for="b in wbBooks" :value="b.id">{{b.name}}</option></select></label>
+                                    <div class="wb-col wb-f1">
+                                        <label>主关键词（逗号分隔）
+<textarea rows="1" v-model="wbEdit.keys" placeholder="例：身世, 小时候"></textarea></label>
+                                    </div>
+                                    <div class="wb-col wb-fauto">
+                                        <label>次关键词逻辑
+<select v-model="wbEdit.selective_logic">
+                                            <option value="and_any">任一命中 AND ANY</option>
+                                            <option value="and_all">全部命中 AND ALL</option>
+                                            <option value="not_all">并非全部命中 NOT ALL</option>
+                                            <option value="not_any">一个都不命中 NOT ANY</option>
+                                        </select></label>
+                                    </div>
+                                    <div class="wb-col wb-f1">
+                                        <label>次关键词（可选过滤；留空 = 不设限）
+<textarea rows="1" v-model="wbEdit.secondary" placeholder="例：海, 家"></textarea></label>
+                                    </div>
+                                </div>
+
+                                <details class="advanced-options"><summary>高级匹配设置</summary>
+<div class="wb-row">
+                                    <div class="wb-col wb-f1">
+                                        <label>扫描消息数（0 跟随全局 {{ wbConfig.scan_depth }}；-1 仅递归）
+<input type="number" min="-1" max="120" v-model.number="wbEdit.scan_depth"></label>
+                                    </div>
+                                    <div class="wb-col wb-f1">
+                                        <label>区分大小写
+<select v-model.number="wbEdit.case_sensitive">
+                                            <option :value="0">否</option><option :value="1">是</option>
+                                        </select></label>
+                                    </div>
+                                    <div class="wb-col wb-f1">
+                                        <label>全词匹配
+<select v-model.number="wbEdit.match_whole_words">
+                                            <option :value="0">否</option><option :value="1">是</option>
+                                        </select></label>
+                                    </div>
+                                    <div class="wb-col wb-f1">
+                                        <label>组内按命中数取胜
+<select v-model.number="wbEdit.use_group_scoring">
+                                            <option :value="0">否</option><option :value="1">是</option>
+                                        </select></label>
+                                    </div>
+                                    <div class="wb-col wb-f1">
+                                        <label>关键词当正则
+<select v-model.number="wbEdit.use_regex">
+                                            <option :value="0">否</option><option :value="1">是</option>
+                                        </select></label>
+                                    </div>
+                                </div>
+
+                                </details>
+                                <details class="advanced-options"><summary>调用场景与人设匹配</summary><div class="wb-row"><label class="wb-col wb-f1">生效场景<select v-model="wbEdit.generation_triggers"><option value="">对话和后台均可触发</option><option value="normal">仅对话</option><option value="background">仅后台生活</option></select></label><label class="wb-col wb-f1">额外扫描角色人设<select v-model.number="wbEdit.match_persona"><option :value="0">关闭</option><option :value="1">开启</option></select></label></div></details>
+<div class="wb-content-head">
+                                    <small>正文（命中后注入给她的内容）</small>
+                                    <span class="wb-tok">估算长度：≈{{ wbEditTokens }}</span>
+                                    <span class="wb-checks">
+                                        <label class="wb-mini"><input type="checkbox" :true-value="1" :false-value="0" v-model="wbEdit.exclude_recursion"> 不被其他条目触发</label>
+                                        <label class="wb-mini"><input type="checkbox" :true-value="1" :false-value="0" v-model="wbEdit.prevent_recursion"> 阻止进一步递归</label>
+                                        <label class="wb-mini">最早递归层级<input type="number" min="0" max="9" class="wb-num-in" v-model.number="wbEdit.delay_until_recursion"></label>
+                                        <label class="wb-mini"><input type="checkbox" :true-value="1" :false-value="0" v-model="wbEdit.ignore_budget"> 忽略预算</label>
+                                    </span>
+                                </div>
+                                <textarea rows="8" v-model="wbEdit.text"
+                                          placeholder="例：我从小在海边长大，家里人叫我阿棠。"></textarea>
+
+                                <details class="advanced-options"><summary>互斥组与触发节奏</summary>
+<div class="wb-row" style="margin-top:12px;">
+                                    <div class="wb-col wb-f4">
+                                        <div class="wb-content-head" style="margin-bottom:5px;">
+                                            <small>互斥组（同名的只出一条）</small>
+                                            <label class="wb-mini" style="margin-left:auto;">
+                                                <input type="checkbox" :true-value="1" :false-value="0" v-model="wbEdit.prioritize">
+                                                优先（组内按 order 取胜）
+                                            </label>
+                                        </div>
+                                        <input type="text" v-model="wbEdit.group_name" placeholder="留空 = 不属于任何组">
+                                    </div>
+                                    <div class="wb-col wb-f2">
+                                        <label>组内权重
+<input type="number" min="0" step="0.1" v-model.number="wbEdit.group_weight"></label>
+                                    </div>
+                                    <div class="wb-col wb-f2">
+                                        <label>持续消息数
+<input type="number" min="0" placeholder="不粘着" v-model.number="wbEdit.sticky"></label>
+                                    </div>
+                                    <div class="wb-col wb-f2">
+                                        <label>冷却消息数
+<input type="number" min="0" placeholder="不冷却" v-model.number="wbEdit.cooldown"></label>
+                                    </div>
+                                    <div class="wb-col wb-f2">
+                                        <label>延迟消息数
+<input type="number" min="0" placeholder="不延迟" v-model.number="wbEdit.delay"></label>
+                                    </div>
+                                </div>
+
+                                </details>
+<div class="wb-bottom">
+                                    <label class="wb-mini">
+                                        <input type="checkbox" :true-value="1" :false-value="0" v-model="wbEdit.selective">
+                                        启用次关键词过滤</label>
+                                    <label class="wb-mini">
+                                        <input type="checkbox" v-model="wbUseProb">
+                                        使用触发概率</label>
+                                    <label class="wb-mini">
+                                        <input type="checkbox" :true-value="1" :false-value="0" v-model="wbEdit.enabled">
+                                        启用此条目</label>
+                                    <span class="wb-spacer"></span>
+                                    <button class="btn btn-primary btn-sm" @click="saveWorldbook">保存</button>
+                                    <button class="btn btn-ghost btn-sm" @click="cancelWorldbook">取消</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <p v-if="!wbList.length && !wbEdit" class="wb-empty">
+                            还没有条目。点「新建条目」补一条身世 / 世界观 / 规矩。
+                        </p>
+                    </div>
+                    <div v-if="pagedTab && !personDetail" class="pagination">
+                        <span>第 {{ pageNumber }} 页 · 每页 {{ pageSize }} 条 · 搜索仅作用于当前页</span>
+                        <button class="btn btn-ghost btn-sm" :disabled="pageNumber === 1 || loadingData" @click="changePage(-1)">上一页</button>
+                        <button class="btn btn-ghost btn-sm" :disabled="dataList.length < pageSize || loadingData" @click="changePage(1)">下一页</button>
+                    </div>
+                    <div v-if="pagedTab && !filteredDataList.length && !personDetail && !(currentTab === 'memories' && !filterUmo) && !loadError" class="empty-state"><strong>{{ searchText ? '没有匹配的记录' : '暂无记录' }}</strong>{{ searchText ? '试试其他关键词，或清除搜索。' : '新的数据会在角色正常运行时出现。' }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="dialog" class="modal-mask" @click.self="closeAndCancel" @keydown.esc="closeAndCancel" @keydown.tab="trapDialog">
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="spectrum-dialog-title">
+                <h3 id="spectrum-dialog-title">{{ dialog.title }}</h3>
+                <div v-if="dialog.hint" class="modal-hint">{{ dialog.hint }}</div>
+                <textarea v-if="dialog.kind === 'text'" v-model="dialog.text" rows="4"
+                          :placeholder="dialog.placeholder || ''"></textarea>
+                <div v-if="dialog.kind === 'confirm'" class="modal-hint" style="margin:0;">{{ dialog.message }}</div>
+                <div class="modal-actions">
+                    <button class="btn btn-ghost" @click="closeAndCancel">取消</button>
+                    <button class="btn" :class="dialog.danger ? 'btn-danger' : 'btn-primary'"
+                            @click="confirmDialog">{{ dialog.confirmText || '确定' }}</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="toast" role="status" class="toast" :class="{err: toastIsError}">{{ toast }}</div>
+    </div>
+
+    <script src="/assets/data/selection.js?v=0.4.21"></script>
+    <script src="/assets/data/spectrum.js?v=0.4.25"></script>
+</body>
+</html>

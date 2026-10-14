@@ -1,0 +1,14 @@
+.selection-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 14px;margin:12px 0;border:1px solid var(--border,#e4deeb);border-radius:12px;background:var(--card,#fff)}
+.selection-bar .selection-count{margin-left:auto;color:var(--text-light,#706778);font-size:13px}
+.record-select{width:16px!important;height:16px;min-width:16px;margin:0 10px 0 0!important;accent-color:var(--primary,#8970aa);vertical-align:middle;cursor:pointer}
+.record-select:focus-visible{outline:2px solid var(--primary,#8970aa);outline-offset:3px}
+.selection-bar button{white-space:nowrap}
+.record-workbench .record-cells{max-width:650px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;line-height:1.7}
+.record-workbench .record-cells details{margin:0}
+.record-workbench .record-cells pre{font:inherit;margin:8px 0;max-height:240px;overflow:auto}
+.record-workbench select{max-width:320px}.record-workbench .record-pager{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-top:14px}
+.record-workbench table{width:100%;border-collapse:collapse}.record-workbench td,.record-workbench th{padding:12px;text-align:left;border-bottom:1px solid var(--border,#e4deeb)}
+.record-workbench .table-scroll{overflow:auto}.record-workbench .confirm-dialog{max-width:520px;width:calc(100% - 48px);border:1px solid var(--border,#e4deeb);border-radius:16px;padding:24px;color:inherit}
+.record-workbench .confirm-dialog::backdrop{background:#19132166;backdrop-filter:blur(2px)}
+.record-workbench .btn-danger{background:var(--danger,#ae5267);border-color:var(--danger,#ae5267);color:white}.record-workbench button:disabled{opacity:.5;cursor:default}
+@media(max-width:600px){.selection-bar{gap:8px}.selection-bar .selection-count{width:100%;margin-left:0}}

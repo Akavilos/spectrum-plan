@@ -1,0 +1,895 @@
+{
+  "fields": {
+    "spectrum": [
+      {
+        "group": "basic",
+        "key": "enabled",
+        "label": "启用光谱核心",
+        "visible": true
+      },
+      {
+        "group": "basic",
+        "key": "scope",
+        "label": "使用范围",
+        "visible": true
+      },
+      {
+        "group": "conversation",
+        "key": "isolate_history",
+        "label": "仅使用光谱核心整理的近期对话",
+        "visible": false
+      },
+      {
+        "group": "conversation",
+        "key": "exchange_limit",
+        "label": "近期对话保留轮数",
+        "visible": true
+      },
+      {
+        "group": "conversation",
+        "key": "life_style",
+        "label": "生活叙述风格",
+        "visible": true
+      },
+      {
+        "group": "conversation",
+        "key": "tools_list_max",
+        "label": "工具清单显示上限",
+        "visible": true
+      },
+      {
+        "group": "people",
+        "key": "person_profile_enabled",
+        "label": "记住人物与关系",
+        "visible": true
+      },
+      {
+        "group": "people",
+        "key": "person_private_in_group",
+        "label": "保护私聊内容",
+        "visible": true
+      },
+      {
+        "group": "people",
+        "key": "cross_ref_enabled",
+        "label": "回忆其他人的相关往来",
+        "visible": true
+      },
+      {
+        "group": "people",
+        "key": "prism_enabled",
+        "label": "使用棱镜核心的心情与回忆",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "enable_fts_memory",
+        "label": "根据话题查找记忆",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_recent_limit",
+        "label": "最近记忆条数",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_related_limit",
+        "label": "相关记忆条数",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_recall_patterns",
+        "label": "关键词检索范围",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_vector_enabled",
+        "label": "按意思查找记忆",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_vector_topk",
+        "label": "语义检索默认候选数",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_origin_enabled",
+        "label": "回看更早的对话原文",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_origin_segments",
+        "label": "旧对话片段数量",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_origin_radius",
+        "label": "片段前后补充条数",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_origin_segment_chars",
+        "label": "单段旧对话字数上限",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_origin_vector_enabled",
+        "label": "按意思查找旧对话",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "memory_origin_vector_topk",
+        "label": "旧对话语义候选数",
+        "visible": true
+      },
+      {
+        "group": "activity",
+        "key": "l2_commitments_enabled",
+        "label": "记录并跟进承诺",
+        "visible": true
+      },
+      {
+        "group": "activity",
+        "key": "l2_advance_enabled",
+        "label": "允许独立生活推进",
+        "visible": true
+      },
+      {
+        "group": "activity",
+        "key": "l3_willingness_threshold",
+        "label": "主动推进意愿门槛",
+        "visible": true
+      },
+      {
+        "group": "activity",
+        "key": "advance_idle_minutes",
+        "label": "主动推进前的安静时间（分钟）",
+        "visible": true
+      },
+      {
+        "group": "activity",
+        "key": "advance_cool_minutes",
+        "label": "主动推进最短间隔（分钟）",
+        "visible": true
+      },
+      {
+        "group": "activity",
+        "key": "advance_model_override",
+        "label": "后台使用的模型名称",
+        "visible": true
+      },
+      {
+        "group": "activity",
+        "key": "poll_seconds",
+        "label": "后台任务检查间隔（秒）",
+        "visible": true
+      },
+      {
+        "group": "activity",
+        "key": "outing_recent_minutes",
+        "label": "同行者近期联系范围（分钟）",
+        "visible": true
+      },
+      {
+        "group": "activity",
+        "key": "l3_interject_enabled",
+        "label": "允许主动参与群聊",
+        "visible": true
+      },
+      {
+        "group": "activity",
+        "key": "l3_interject_threshold",
+        "label": "群聊插话意愿门槛",
+        "visible": true
+      },
+      {
+        "group": "sleep",
+        "key": "l2_sleep_enabled",
+        "label": "允许角色睡觉",
+        "visible": true
+      },
+      {
+        "group": "sleep",
+        "key": "sleep_min_minutes",
+        "label": "最短睡眠时间（分钟）",
+        "visible": true
+      },
+      {
+        "group": "sleep",
+        "key": "sleep_max_minutes",
+        "label": "最长睡眠时间（分钟）",
+        "visible": true
+      },
+      {
+        "group": "sleep",
+        "key": "sleep_inbox_enabled",
+        "label": "醒来后查看睡眠期间的来信",
+        "visible": true
+      },
+      {
+        "group": "worldbook",
+        "key": "worldbook_enabled",
+        "label": "启用世界书",
+        "visible": true
+      },
+      {
+        "group": "worldbook",
+        "key": "worldbook_scan_depth",
+        "label": "关键词扫描消息数",
+        "visible": true
+      },
+      {
+        "group": "worldbook",
+        "key": "worldbook_max",
+        "label": "每次最多使用的条目数",
+        "visible": true
+      },
+      {
+        "group": "worldbook",
+        "key": "worldbook_budget_percent",
+        "label": "世界书篇幅比例（%）",
+        "visible": true
+      },
+      {
+        "group": "worldbook",
+        "key": "worldbook_context_tokens",
+        "label": "预算参考上下文长度（token）",
+        "visible": true
+      },
+      {
+        "group": "worldbook",
+        "key": "worldbook_token_budget",
+        "label": "世界书篇幅绝对上限（token）",
+        "visible": true
+      },
+      {
+        "group": "worldbook",
+        "key": "worldbook_recursion",
+        "label": "允许条目带出其他条目",
+        "visible": true
+      },
+      {
+        "group": "worldbook",
+        "key": "worldbook_max_steps",
+        "label": "条目联动最多检查轮数",
+        "visible": true
+      },
+      {
+        "group": "worldbook",
+        "key": "worldbook_vector_enabled",
+        "label": "按意思匹配无触发词条目",
+        "visible": true
+      },
+      {
+        "group": "thinking",
+        "key": "possession_enabled",
+        "label": "启用角色思考记录",
+        "visible": true
+      },
+      {
+        "group": "thinking",
+        "key": "prefill_possession",
+        "label": "DeepSeek 思考续写模式",
+        "visible": false
+      },
+      {
+        "group": "thinking",
+        "key": "prefill_gemini_closed",
+        "label": "Gemini 思考续写模式",
+        "visible": false
+      },
+      {
+        "group": "director",
+        "key": "director_enabled",
+        "label": "启用剧情导演",
+        "visible": true
+      },
+      {
+        "group": "director",
+        "key": "director_startup_grace_s",
+        "label": "重启后的等待时间（秒）",
+        "visible": true
+      },
+      {
+        "group": "director",
+        "key": "director_max_turns_per_tick",
+        "label": "每次最多安排的任务数",
+        "visible": true
+      },
+      {
+        "group": "director",
+        "key": "director_advance_idle_minutes",
+        "label": "主动推进前的安静时间（分钟）",
+        "visible": true
+      },
+      {
+        "group": "director",
+        "key": "director_advance_max_idle_minutes",
+        "label": "停止主动推进的闲置时长（分钟）",
+        "visible": true
+      },
+      {
+        "group": "director",
+        "key": "director_advance_willingness_threshold",
+        "label": "主动推进意愿门槛",
+        "visible": true
+      },
+      {
+        "group": "director",
+        "key": "director_advance_cool_minutes",
+        "label": "同一会话推进间隔（分钟）",
+        "visible": true
+      },
+      {
+        "group": "director",
+        "key": "director_history_turns",
+        "label": "主动消息参考的近期往来数",
+        "visible": true
+      },
+      {
+        "group": "director",
+        "key": "director_compress_via_director",
+        "label": "由导演安排记忆整理",
+        "visible": true
+      },
+      {
+        "group": "director",
+        "key": "director_library_ttl_s",
+        "label": "剧情素材刷新间隔（秒）",
+        "visible": true
+      },
+      {
+        "group": "storylines",
+        "key": "director_closure_enabled",
+        "label": "允许当前故事收尾",
+        "visible": true
+      },
+      {
+        "group": "storylines",
+        "key": "director_arc_beats",
+        "label": "故事收尾前的最少回合数",
+        "visible": true
+      },
+      {
+        "group": "storylines",
+        "key": "director_beat_span_minutes",
+        "label": "剧情回合持续时间（分钟）",
+        "visible": true
+      },
+      {
+        "group": "storylines",
+        "key": "director_thread_max_open",
+        "label": "同时进行的故事线总数",
+        "visible": true
+      },
+      {
+        "group": "storylines",
+        "key": "director_thread_max_per_kind",
+        "label": "同类故事线数量上限",
+        "visible": true
+      },
+      {
+        "group": "storylines",
+        "key": "director_thread_max_per_scope",
+        "label": "同等跨度故事线数量上限",
+        "visible": true
+      },
+      {
+        "group": "storylines",
+        "key": "director_thread_abandon_factor",
+        "label": "故事线超期放弃倍数",
+        "visible": true
+      },
+      {
+        "group": "storylines",
+        "key": "director_min_paid_threads",
+        "label": "收尾前至少完成的故事线数",
+        "visible": true
+      },
+      {
+        "group": "storylines",
+        "key": "director_arc_max_beats",
+        "label": "放宽收尾条件的回合数",
+        "visible": true
+      },
+      {
+        "group": "pacing",
+        "key": "director_pacing_enabled",
+        "label": "启用剧情张弛节奏",
+        "visible": true
+      },
+      {
+        "group": "pacing",
+        "key": "director_peak_threshold",
+        "label": "进入高峰的强度门槛",
+        "visible": true
+      },
+      {
+        "group": "pacing",
+        "key": "director_sustain_minutes",
+        "label": "高峰保持时间（分钟）",
+        "visible": true
+      },
+      {
+        "group": "pacing",
+        "key": "director_relax_minutes",
+        "label": "回落后的休息时间（分钟）",
+        "visible": true
+      },
+      {
+        "group": "pacing",
+        "key": "director_intensity_decay_per_minute",
+        "label": "剧情强度每分钟回落量",
+        "visible": true
+      },
+      {
+        "group": "pacing",
+        "key": "director_w_message",
+        "label": "聊天活跃变化的影响权重",
+        "visible": true
+      },
+      {
+        "group": "pacing",
+        "key": "director_w_mood",
+        "label": "心情变化的影响权重",
+        "visible": true
+      },
+      {
+        "group": "pacing",
+        "key": "director_intervention_budget",
+        "label": "剧情介入额度上限",
+        "visible": true
+      },
+      {
+        "group": "pacing",
+        "key": "director_intervention_recharge",
+        "label": "每分钟恢复的介入额度",
+        "visible": true
+      },
+      {
+        "group": "pacing",
+        "key": "director_defer_minutes",
+        "label": "介入额度不足时的等待（分钟）",
+        "visible": true
+      },
+      {
+        "group": "director_advanced",
+        "key": "director_tier2_fresh_minutes",
+        "label": "条件判断结果复用时间（分钟）",
+        "visible": true
+      },
+      {
+        "group": "director_advanced",
+        "key": "director_tier3_enabled",
+        "label": "允许模型判断复杂剧情条件",
+        "visible": true
+      },
+      {
+        "group": "director_advanced",
+        "key": "director_tier3_max_per_hour",
+        "label": "复杂条件每小时判断上限",
+        "visible": true
+      },
+      {
+        "group": "director_advanced",
+        "key": "director_eval_enabled",
+        "label": "启用剧情素材评分",
+        "visible": true
+      },
+      {
+        "group": "director_advanced",
+        "key": "director_intent_expire_minutes",
+        "label": "已尝试承诺的超期时间（分钟）",
+        "visible": true
+      },
+      {
+        "group": "director_advanced",
+        "key": "director_intent_max_attempts",
+        "label": "承诺尝试次数上限",
+        "visible": true
+      },
+      {
+        "group": "director_advanced",
+        "key": "director_silent_state_mutation",
+        "label": "允许无回复时改变位置与作息（高级）",
+        "visible": true
+      },
+      {
+        "group": "director_advanced",
+        "key": "director_fires_max_rows",
+        "label": "剧情执行记录保留上限",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "freeze_enabled",
+        "label": "异常时暂停生活推进",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "freeze_fail_streak",
+        "label": "触发暂停的累计失败次数",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "freeze_max_minutes",
+        "label": "最长暂停时间（分钟）",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "freeze_probe_interval_seconds",
+        "label": "连接状态检查间隔（秒）",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "freeze_confirm_times",
+        "label": "确认断线需要的检查次数",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "freeze_thaw_confirm_times",
+        "label": "恢复连接需要的检查次数",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "freeze_probe_fail_open",
+        "label": "无法获取连接状态时允许恢复",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "low_freq_mode",
+        "label": "统一模型调用限频",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "low_freq_rpm",
+        "label": "共享请求额度／分钟",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "low_freq_pause_seconds",
+        "label": "接口故障后暂停（秒）",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "low_freq_max_wait_seconds",
+        "label": "额度不足最多等候（秒）",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "v20_reask_enabled",
+        "label": "允许回复格式补写",
+        "visible": true
+      },
+      {
+        "group": "stability",
+        "key": "max_fail_streak",
+        "label": "暂时停用会话的连续格式错误次数",
+        "visible": true
+      },
+      {
+        "group": "diagnostics",
+        "key": "debug",
+        "label": "记录完整模型输入（排查用）",
+        "visible": true
+      },
+      {
+        "group": "diagnostics",
+        "key": "possession_debug",
+        "label": "记录思考输出（排查用）",
+        "visible": true
+      }
+    ],
+    "prism": [
+      {
+        "group": "basic",
+        "key": "enabled",
+        "label": "启用棱镜核心",
+        "visible": true
+      },
+      {
+        "group": "basic",
+        "key": "provider_id",
+        "label": "棱镜核心使用的模型",
+        "visible": true
+      },
+      {
+        "group": "personality",
+        "key": "trait_openness",
+        "label": "开放性",
+        "visible": true
+      },
+      {
+        "group": "personality",
+        "key": "trait_conscientiousness",
+        "label": "尽责性",
+        "visible": true
+      },
+      {
+        "group": "personality",
+        "key": "trait_extraversion",
+        "label": "外向性",
+        "visible": true
+      },
+      {
+        "group": "personality",
+        "key": "trait_agreeableness",
+        "label": "宜人性",
+        "visible": true
+      },
+      {
+        "group": "personality",
+        "key": "trait_neuroticism",
+        "label": "情绪敏感性",
+        "visible": true
+      },
+      {
+        "group": "personality",
+        "key": "cares",
+        "label": "特别在意的事情（可选）",
+        "visible": true
+      },
+      {
+        "group": "personality",
+        "key": "personality_effects_enabled",
+        "label": "精细人格计算",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "recall_every",
+        "label": "每多少轮往来整理场景",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "write_narrative",
+        "label": "生成主观回忆文字",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "idle_seal_minutes",
+        "label": "对话结束后的整理等待（分钟）",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "half_life_hours",
+        "label": "基础记忆淡化周期（小时）",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "mood_half_life_hours",
+        "label": "心情回落半衰期（小时）",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "recall_by_topic",
+        "label": "按当前话题联想",
+        "visible": true
+      },
+      {
+        "group": "memory",
+        "key": "batch_reading_enabled",
+        "label": "批量整理场景话题",
+        "visible": true
+      },
+      {
+        "group": "sharing",
+        "key": "share_interperson",
+        "label": "共享对当前人物的感受",
+        "visible": true
+      },
+      {
+        "group": "sharing",
+        "key": "share_mood",
+        "label": "共享当前心情",
+        "visible": true
+      },
+      {
+        "group": "sharing",
+        "key": "share_recall",
+        "label": "共享相关回忆",
+        "visible": true
+      },
+      {
+        "group": "sharing",
+        "key": "share_recent_others",
+        "label": "分享相关的跨会话来信",
+        "visible": true
+      },
+      {
+        "group": "sharing",
+        "key": "share_scene_details",
+        "label": "分享回忆中的活动与见闻",
+        "visible": true
+      },
+      {
+        "group": "sharing",
+        "key": "share_expression",
+        "label": "分享情绪表达倾向",
+        "visible": true
+      },
+      {
+        "group": "development",
+        "key": "correction_enabled",
+        "label": "记录理解与明确纠正",
+        "visible": true
+      },
+      {
+        "group": "development",
+        "key": "reconsolidation_enabled",
+        "label": "更新被纠正的主观回忆",
+        "visible": true
+      },
+      {
+        "group": "development",
+        "key": "rehearsal_enabled",
+        "label": "自然重访加固记忆",
+        "visible": true
+      },
+      {
+        "group": "development",
+        "key": "generalization_enabled",
+        "label": "归纳熟悉的日常话题",
+        "visible": true
+      }
+    ],
+    "guard": [
+      {
+        "group": "basic",
+        "key": "enabled",
+        "label": "启用投递哨兵",
+        "visible": true
+      },
+      {
+        "group": "basic",
+        "key": "scope",
+        "label": "保护范围",
+        "visible": true
+      },
+      {
+        "group": "detection",
+        "key": "probe_groups",
+        "label": "检查机器人是否被群禁言",
+        "visible": true
+      },
+      {
+        "group": "detection",
+        "key": "probe_all_shut",
+        "label": "同时检查全员禁言",
+        "visible": true
+      },
+      {
+        "group": "detection",
+        "key": "probe_interval_seconds",
+        "label": "正常群聊检查间隔（秒）",
+        "visible": true
+      },
+      {
+        "group": "detection",
+        "key": "track_outcome",
+        "label": "跟踪真实发送结果",
+        "visible": true
+      },
+      {
+        "group": "detection",
+        "key": "max_fail_streak",
+        "label": "判定不可送达的连续失败次数",
+        "visible": true
+      },
+      {
+        "group": "recovery",
+        "key": "recovery_poll_seconds",
+        "label": "异常会话恢复检查间隔（秒）",
+        "visible": true
+      },
+      {
+        "group": "recovery",
+        "key": "recovery_confirm_times",
+        "label": "查询恢复的连续确认次数",
+        "visible": true
+      },
+      {
+        "group": "recovery",
+        "key": "probe_retry_enabled",
+        "label": "私聊补发失败后降低重试频率",
+        "visible": true
+      },
+      {
+        "group": "recovery",
+        "key": "probe_retry_fail_limit",
+        "label": "降低重试频率前的失败次数",
+        "visible": true
+      },
+      {
+        "group": "recovery",
+        "key": "probe_retry_backoff_minutes",
+        "label": "降低频率后的等待（分钟）",
+        "visible": true
+      },
+      {
+        "group": "outbox",
+        "key": "outbox_ttl_minutes",
+        "label": "待补发内容有效期（分钟）",
+        "visible": true
+      },
+      {
+        "group": "outbox",
+        "key": "flush_batch_max",
+        "label": "每批最多补发的条数",
+        "visible": true
+      },
+      {
+        "group": "outbox",
+        "key": "flush_throttle_seconds",
+        "label": "两条补发消息之间的间隔（秒）",
+        "visible": true
+      },
+      {
+        "group": "outbox",
+        "key": "flush_announce_text",
+        "label": "补发前的说明文字（可选）",
+        "visible": true
+      },
+      {
+        "group": "context",
+        "key": "brief_on_recovery",
+        "label": "恢复后提供错过的来信",
+        "visible": true
+      },
+      {
+        "group": "context",
+        "key": "max_brief_items",
+        "label": "错过来信的提供条数",
+        "visible": true
+      },
+      {
+        "group": "maintenance",
+        "key": "tick_seconds",
+        "label": "后台检查间隔（秒）",
+        "visible": true
+      },
+      {
+        "group": "maintenance",
+        "key": "debug",
+        "label": "记录检查详情（排查用）",
+        "visible": true
+      }
+    ]
+  },
+  "commands": [
+    "/光谱核心",
+    "/叙述事实",
+    "/叙述查看",
+    "/叙述删除",
+    "/棱镜",
+    "/哨兵"
+  ],
+  "experimental_possession": "not included in formal sources"
+}

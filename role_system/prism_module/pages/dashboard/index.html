@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>棱镜核心数据 · 光谱计划</title>
+<link rel="stylesheet" href="/assets/data/workspace.css?v=0.4.12">
+<link rel="stylesheet" href="/assets/data/selection.css?v=0.4.21"></head>
+<body>
+<div class="data-shell">
+  <header class="page-header">
+    <div><div class="eyebrow">SPECTRUM PROJECT / DATA</div><h1>棱镜核心数据</h1><p>查看主观心情、场景回忆、记忆强度与联想关系。</p></div>
+    <div class="header-actions"><span class="hint">数据范围：角色全局</span><button id="refresh" class="btn btn-ghost">刷新数据</button></div>
+  </header>
+  <div class="surface">
+    <nav id="nav" class="data-nav" aria-label="棱镜核心数据分类"></nav>
+    <div class="data-content">
+      <div class="section-heading"><div><h2 id="view-title"></h2><p id="view-hint"></p></div><span class="current-scope">全局</span></div>
+      <div id="toolbar" class="data-toolbar" hidden>
+        <div class="search-box"><input id="search" aria-label="搜索当前已加载的记录" placeholder="搜索当前已加载的记录"><button id="clear-search" class="btn btn-ghost" hidden>清除</button></div>
+        <span id="record-count" class="hint"></span>
+      </div>
+      <div id="selection-toolbar"></div>
+      <main id="main" aria-live="polite"><div class="list-loading">正在读取数据…</div></main>
+    </div>
+  </div>
+</div>
+<dialog id="confirm" class="confirm-dialog" aria-labelledby="confirm-title">
+  <h3 id="confirm-title">删除场景</h3><p id="confirm-message"></p>
+  <div class="modal-actions"><button id="confirm-cancel" class="btn btn-ghost">取消</button><button id="confirm-yes" class="btn btn-danger">删除场景</button></div>
+</dialog>
+<div id="toast" class="data-toast" role="status" hidden></div>
+<script src="/assets/data/selection.js?v=0.4.21"></script><script src="/assets/data/prism.js?v=0.4.21"></script>
+</body>
+</html>

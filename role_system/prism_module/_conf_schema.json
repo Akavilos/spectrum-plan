@@ -1,0 +1,422 @@
+{
+  "basic": {
+    "description": "开始使用",
+    "type": "object",
+    "hint": "启用后即可使用默认人格与记忆设置。在光谱核心设置中开启“使用棱镜核心的心情与回忆”，即可参与角色回复。修改人格设置后保存即可生效。",
+    "items": {
+      "enabled": {
+        "description": "启用棱镜核心",
+        "type": "bool",
+        "default": true,
+        "hint": "记录角色主观经历、心情和对人的感受。关闭后停止参与，已有记忆保留。棱镜核心本身不负责向用户发送聊天回复。"
+      },
+      "provider_id": {
+        "description": "棱镜核心使用的模型",
+        "type": "string",
+        "default": "",
+        "hint": "用于情绪与关系观察、话题判断和场景整理。留空跟随对话模型，也可选择“模型管理”中保存的其他模型。",
+        "_special": "select_provider"
+      }
+    }
+  },
+  "personality": {
+    "description": "人格与情绪倾向",
+    "type": "object",
+    "hint": "五项人格数值均为 0～1，0.5 为中间水平。它们影响主观情绪与目标的计算倾向；通常先使用默认值。",
+    "items": {
+      "trait_openness": {
+        "description": "开放性",
+        "type": "float",
+        "default": 0.6,
+        "hint": "范围 0～1，越高越重视探索、新鲜体验和理解。0.5 表示中间水平；这是情绪与目标计算的倾向，不是固定回复模板。",
+        "min": 0,
+        "max": 1
+      },
+      "trait_conscientiousness": {
+        "description": "尽责性",
+        "type": "float",
+        "default": 0.5,
+        "hint": "范围 0～1，越高越重视秩序、目标和完成事情。通常先保留默认值，再按角色性格微调。",
+        "min": 0,
+        "max": 1
+      },
+      "trait_extraversion": {
+        "description": "外向性",
+        "type": "float",
+        "default": 0.55,
+        "hint": "范围 0～1，影响情绪表达倾向、活跃程度和恢复速度。越高通常越愿意表达，不保证每条消息都主动回应。",
+        "min": 0,
+        "max": 1
+      },
+      "trait_agreeableness": {
+        "description": "宜人性",
+        "type": "float",
+        "default": 0.8,
+        "hint": "范围 0～1，越高越重视关系、体谅与合作。它不要求角色总是顺从，也不直接规定回复内容。",
+        "min": 0,
+        "max": 1
+      },
+      "trait_neuroticism": {
+        "description": "情绪敏感性",
+        "type": "float",
+        "default": 0.6,
+        "hint": "对应大五人格的神经质维度，范围 0～1。越高，情绪反应通常越强、恢复较慢；没有人格好坏之分。",
+        "min": 0,
+        "max": 1
+      },
+      "cares": {
+        "description": "特别在意的事情（可选）",
+        "type": "text",
+        "default": "{}",
+        "hint": "JSON目标倍率，如 {\"belonging\":1.2,\"autonomy\":0.8}。只影响九种目标的敏感度；需开启精细人格计算。"
+      },
+      "personality_effects_enabled": {
+        "description": "精细人格计算",
+        "type": "bool",
+        "default": true,
+        "hint": "让人格恢复速度与在意事项影响计算，不直接规定台词。"
+      }
+    }
+  },
+  "memory": {
+    "description": "经历与回忆",
+    "type": "object",
+    "hint": "基础记录持续保存；文字回忆按消息数量或会话安静时间整理。记忆淡化不会删除历史场景。",
+    "items": {
+      "recall_every": {
+        "description": "每多少轮往来整理场景",
+        "type": "int",
+        "default": 12,
+        "hint": "按收发瞬间计数，正常一问一答约为一轮；默认12轮。话题变化或安静时长也可触发整理。"
+      },
+      "write_narrative": {
+        "description": "生成主观回忆文字",
+        "type": "bool",
+        "default": true,
+        "hint": "开启后，用模型将场景写成角色的回忆。关闭后仍保存场景基础记录，但不生成这部分叙述；通常保持开启。"
+      },
+      "idle_seal_minutes": {
+        "description": "对话结束后的整理等待（分钟）",
+        "type": "int",
+        "default": 10,
+        "hint": "会话安静多久后封存场景，并在开启回忆文字时整理叙述。不会让这段时间的基础记录等待落盘。"
+      },
+      "half_life_hours": {
+        "description": "基础记忆淡化周期（小时）",
+        "type": "float",
+        "default": 72,
+        "hint": "记忆强度减半的参考时长。情绪、显著性和有效重访影响实际淡化；不删除原始记录。",
+        "min": 0.01,
+        "max": 87600
+      },
+      "mood_half_life_hours": {
+        "type": "float",
+        "description": "心情回落半衰期（小时）",
+        "default": 4.0,
+        "hint": "没有新的触动时，心情逐渐靠近人格基调。数值越大，心情延续越久；需大于 0。冻结期间不计时。",
+        "min": 0.01,
+        "max": 87600
+      },
+      "recall_by_topic": {
+        "description": "按当前话题联想",
+        "type": "bool",
+        "default": true,
+        "hint": "结合当前话题、人物与近期经历寻找相关回忆，无需向量模型。"
+      },
+      "batch_reading_enabled": {
+        "description": "批量整理场景话题",
+        "type": "bool",
+        "default": false,
+        "hint": "封存时整理连续话题及原话索引，每20条增加一次模型调用；即时情绪分析保留。"
+      }
+    }
+  },
+  "sharing": {
+    "description": "参与角色回复的信息",
+    "type": "object",
+    "hint": "控制棱镜核心向光谱核心提供哪些背景，不删除已有经历。角色自行决定如何使用。",
+    "items": {
+      "share_interperson": {
+        "description": "共享对当前人物的感受",
+        "type": "bool",
+        "default": true,
+        "hint": "允许光谱核心参考角色对当前人物的情感底色。关闭后不提供这部分感受。"
+      },
+      "share_mood": {
+        "description": "共享当前心情",
+        "type": "bool",
+        "default": true,
+        "hint": "允许光谱核心参考角色此刻的主观心情。关闭后不向光谱核心提供心情，棱镜核心内部仍可记录与变化。"
+      },
+      "share_recall": {
+        "description": "共享相关回忆",
+        "type": "bool",
+        "default": true,
+        "hint": "允许光谱核心获取与当前话题和人物相关的主观回忆。关闭后停止向光谱核心提供，不删除已有回忆。"
+      },
+      "share_recent_others": {
+        "description": "分享相关的跨会话来信",
+        "type": "bool",
+        "default": true,
+        "hint": "提供与本轮话题或提到的人物相关的历史原话，附时间和来源；不固定搬入无关近期消息。"
+      },
+      "share_scene_details": {
+        "description": "分享回忆中的活动与见闻",
+        "type": "bool",
+        "default": false,
+        "hint": "随相关回忆提供当时活动和已注意到的内容，不提供未留意信息。"
+      },
+      "share_expression": {
+        "description": "分享情绪表达倾向",
+        "type": "bool",
+        "default": false,
+        "hint": "提供含蓄或外显的主观倾向，具体表达仍由角色人设与当前场合决定。"
+      }
+    }
+  },
+  "enabled": {
+    "description": "启用棱镜核心",
+    "type": "bool",
+    "default": true,
+    "hint": "记录角色主观经历、心情和对人的感受。关闭后停止参与，已有记忆保留。棱镜核心本身不负责向用户发送聊天回复。",
+    "invisible": true
+  },
+  "provider_id": {
+    "description": "棱镜核心使用的模型",
+    "type": "string",
+    "default": "",
+    "hint": "留空使用主模型；使用独立模型时，填写“模型与人设 → 独立辅助模型”中保存的配置名称。",
+    "invisible": true
+  },
+  "备注_人格": {
+    "description": "旧版分隔标记",
+    "type": "string",
+    "default": "下面五项是大五人格（0~1，0.5 是人群均值）。",
+    "hint": "仅保留旧配置兼容，不参与功能控制。",
+    "invisible": true
+  },
+  "trait_openness": {
+    "description": "开放性",
+    "type": "float",
+    "default": 0.6,
+    "hint": "范围 0～1，越高越重视探索、新鲜体验和理解。0.5 表示中间水平；这是情绪与目标计算的倾向，不是固定回复模板。",
+    "invisible": true,
+    "min": 0,
+    "max": 1
+  },
+  "trait_conscientiousness": {
+    "description": "尽责性",
+    "type": "float",
+    "default": 0.5,
+    "hint": "范围 0～1，越高越重视秩序、目标和完成事情。通常先保留默认值，再按角色性格微调。",
+    "invisible": true,
+    "min": 0,
+    "max": 1
+  },
+  "trait_extraversion": {
+    "description": "外向性",
+    "type": "float",
+    "default": 0.55,
+    "hint": "范围 0～1，影响情绪表达倾向、活跃程度和恢复速度。越高通常越愿意表达，不保证每条消息都主动回应。",
+    "invisible": true,
+    "min": 0,
+    "max": 1
+  },
+  "trait_agreeableness": {
+    "description": "宜人性",
+    "type": "float",
+    "default": 0.8,
+    "hint": "范围 0～1，越高越重视关系、体谅与合作。它不要求角色总是顺从，也不直接规定回复内容。",
+    "invisible": true,
+    "min": 0,
+    "max": 1
+  },
+  "trait_neuroticism": {
+    "description": "情绪敏感性",
+    "type": "float",
+    "default": 0.6,
+    "hint": "对应大五人格的神经质维度，范围 0～1。越高，情绪反应通常越强、恢复较慢；没有人格好坏之分。",
+    "invisible": true,
+    "min": 0,
+    "max": 1
+  },
+  "cares": {
+    "description": "特别在意的事情（可选）",
+    "type": "text",
+    "default": "{}",
+    "hint": "JSON目标倍率，如 {\"belonging\":1.2,\"autonomy\":0.8}。只影响九种目标的敏感度；需开启精细人格计算。",
+    "invisible": true
+  },
+  "备注_记忆": {
+    "description": "旧版分隔标记",
+    "type": "string",
+    "default": "下面几项决定「多快回想一次」「多久忘掉」。",
+    "hint": "仅保留旧配置兼容，不参与功能控制。",
+    "invisible": true
+  },
+  "recall_every": {
+    "description": "每多少轮往来整理场景",
+    "type": "int",
+    "default": 12,
+    "hint": "按收发瞬间计数，正常一问一答约为一轮；默认12轮。话题变化或安静时长也可触发整理。",
+    "invisible": true
+  },
+  "write_narrative": {
+    "description": "生成主观回忆文字",
+    "type": "bool",
+    "default": true,
+    "hint": "开启后，用模型将场景写成角色的回忆。关闭后仍保存场景基础记录，但不生成这部分叙述；通常保持开启。",
+    "invisible": true
+  },
+  "half_life_hours": {
+    "description": "基础记忆淡化周期（小时）",
+    "type": "float",
+    "default": 72,
+    "hint": "记忆强度减半的参考时长。情绪、显著性和有效重访影响实际淡化；不删除原始记录。",
+    "invisible": true,
+    "min": 0.01,
+    "max": 87600
+  },
+  "备注_接口": {
+    "description": "旧版分隔标记",
+    "type": "string",
+    "default": "棱镜把「她此刻的心情」和「该想起什么」开放给别的插件。",
+    "hint": "仅保留旧配置兼容，不参与功能控制。",
+    "invisible": true
+  },
+  "share_interperson": {
+    "description": "共享对当前人物的感受",
+    "type": "bool",
+    "default": true,
+    "hint": "允许光谱核心参考角色对当前人物的情感底色。关闭后不提供这部分感受。",
+    "invisible": true
+  },
+  "share_mood": {
+    "description": "共享当前心情",
+    "type": "bool",
+    "default": true,
+    "hint": "允许光谱核心参考角色此刻的主观心情。关闭后不向光谱核心提供心情，棱镜核心内部仍可记录与变化。",
+    "invisible": true
+  },
+  "share_recall": {
+    "description": "共享相关回忆",
+    "type": "bool",
+    "default": true,
+    "hint": "允许光谱核心获取与当前话题和人物相关的主观回忆。关闭后停止向光谱核心提供，不删除已有回忆。",
+    "invisible": true
+  },
+  "share_recent_others": {
+    "description": "分享相关的跨会话来信",
+    "type": "bool",
+    "default": true,
+    "hint": "提供与本轮话题或提到的人物相关的历史原话，附时间和来源；不固定搬入无关近期消息。",
+    "invisible": true
+  },
+  "idle_seal_minutes": {
+    "description": "对话结束后的整理等待（分钟）",
+    "type": "int",
+    "default": 10,
+    "hint": "会话安静多久后封存场景，并在开启回忆文字时整理叙述。不会让这段时间的基础记录等待落盘。",
+    "invisible": true
+  },
+  "settings_layout_version": {
+    "description": "配置布局版本",
+    "type": "int",
+    "default": 0,
+    "invisible": true
+  },
+  "development": {
+    "description": "理解与经历积累",
+    "type": "object",
+    "hint": "主观版本与原话分开保存。关闭开关保留已有记录，不产生新的对应更新。",
+    "items": {
+      "correction_enabled": {
+        "description": "记录理解与明确纠正",
+        "type": "bool",
+        "default": true,
+        "hint": "在现有分析中记录理解；纠正须匹配当前人物及两端原话，不增加独立调用。"
+      },
+      "reconsolidation_enabled": {
+        "description": "更新被纠正的主观回忆",
+        "type": "bool",
+        "default": true,
+        "hint": "收到明确纠正后更新主观版本并保留旧版；需开启理解纠正。"
+      },
+      "rehearsal_enabled": {
+        "description": "自然重访加固记忆",
+        "type": "bool",
+        "default": false,
+        "hint": "明确重提同一人的相关往事才加固，每条每天最多一次；背景读取不加固。"
+      },
+      "generalization_enabled": {
+        "description": "归纳熟悉的日常话题",
+        "type": "bool",
+        "default": true,
+        "hint": "从至少三段平淡经历归纳熟悉话题，保留来源；不判定人物品行，不调用模型。"
+      }
+    }
+  },
+  "personality_effects_enabled": {
+    "description": "精细人格计算",
+    "type": "bool",
+    "default": true,
+    "hint": "让人格恢复速度与在意事项影响计算，不直接规定台词。",
+    "invisible": true
+  },
+  "recall_by_topic": {
+    "description": "按当前话题联想",
+    "type": "bool",
+    "default": true,
+    "hint": "结合当前话题、人物与近期经历寻找相关回忆，无需向量模型。",
+    "invisible": true
+  },
+  "correction_enabled": {
+    "description": "记录理解与明确纠正",
+    "type": "bool",
+    "default": true,
+    "hint": "在现有分析中记录理解；纠正须匹配当前人物及两端原话，不增加独立调用。",
+    "invisible": true
+  },
+  "reconsolidation_enabled": {
+    "description": "更新被纠正的主观回忆",
+    "type": "bool",
+    "default": true,
+    "hint": "收到明确纠正后更新主观版本并保留旧版；需开启理解纠正。",
+    "invisible": true
+  },
+  "rehearsal_enabled": {
+    "description": "自然重访加固记忆",
+    "type": "bool",
+    "default": false,
+    "hint": "明确重提同一人的相关往事才加固，每条每天最多一次；背景读取不加固。",
+    "invisible": true
+  },
+  "generalization_enabled": {
+    "description": "归纳熟悉的日常话题",
+    "type": "bool",
+    "default": true,
+    "hint": "从至少三段平淡经历归纳熟悉话题，保留来源；不判定人物品行，不调用模型。",
+    "invisible": true
+  },
+  "batch_reading_enabled": {
+    "description": "批量整理场景话题",
+    "type": "bool",
+    "default": false,
+    "hint": "封存时整理连续话题及原话索引，每20条增加一次模型调用；即时情绪分析保留。",
+    "invisible": true
+  },
+  "share_scene_details": {
+    "description": "分享回忆中的活动与见闻",
+    "type": "bool",
+    "default": false,
+    "hint": "随相关回忆提供当时活动和已注意到的内容，不提供未留意信息。",
+    "invisible": true
+  },
+  "share_expression": {
+    "description": "分享情绪表达倾向",
+    "type": "bool",
+    "default": false,
+    "hint": "提供含蓄或外显的主观倾向，具体表达仍由角色人设与当前场合决定。",
+    "invisible": true
+  }
+}
