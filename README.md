@@ -4,6 +4,14 @@
 
 当前版本 **0.4.30**。首次安装为空白状态：没有预设角色、联系人、专属称呼、聊天历史或世界书。模型、嵌入模型与语音服务均由使用者配置；嵌入不是运行必需项。
 
+## 视频演示
+
+[![光谱计划：从安装到聊天](docs/media/tutorial-cover.jpg)](https://github.com/Akavilos/spectrum-plan/releases/tag/tutorial-20261015)
+
+[查看完整教程](https://github.com/Akavilos/spectrum-plan/releases/tag/tutorial-20261015) · [下载 MP4](https://github.com/Akavilos/spectrum-plan/releases/download/tutorial-20261015/spectrum-plan-tutorial-20261015.mp4)
+
+约 **6 分 52 秒 · 1080p**，演示安装启动、模型与人设配置、连接机器人、主要功能及两段实际聊天。
+
 ## 阅读导航
 
 第一次安装先看[快速开始](#快速开始)，日常配置与功能说明都在本页。
